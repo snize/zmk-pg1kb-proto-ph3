@@ -70,6 +70,21 @@ PAW3222 と PMW3610 は同じ SCLK / SDIO / CS / MOTION 配線を使いますが
 
 スクロールとカーソル移動では Y の符号の意味が逆（`REL_Y` は正が下、`REL_WHEEL` は正が上）なので、そのボールの本来の役割と違う側に `Y_INVERT` を足しています。
 
+### センサーの向きと `zip_xy_transform`
+
+光学センサーは左右とも、以前の実装から見て**上から見て反時計回りに 90 度**回した向きで載せています。この 1/4 回転ぶんはチェーン先頭の `zip_xy_transform` で打ち消します。旧チェーンの変換に 90 度回転を合成すると `XY_SWAP` が消え、軸の反転だけが残ります。
+
+| チェーン | 回転前 | 回転後 |
+| --- | --- | --- |
+| 右ボール カーソル（Base / Num） | `XY_SWAP \| X_INVERT` | 変換なし（`0`） |
+| 右ボール スクロール（Sym） | `XY_SWAP \| X_INVERT \| Y_INVERT` | `Y_INVERT` |
+| 左ボール スクロール（Base / Sym） | `XY_SWAP` | `X_INVERT` |
+| 左ボール カーソル（Num） | `XY_SWAP \| Y_INVERT` | `X_INVERT \| Y_INVERT` |
+
+右ボールはこの向きでセンサーの X/Y がそのままカーソルの X/Y に一致するため変換が不要になります（フラグ `0` の `zip_xy_transform` は残してあるので、向きを直すときはここを書き換えます）。左ボールのセンサーは右と 180 度逆向きに載るので `X_INVERT | Y_INVERT` が入ります。
+
+もし実機で**上下左右がまとめて逆**になる場合は回転方向が逆（時計回り 90 度）だったということなので、4 チェーンすべてを 180 度ぶん読み替えます（変換なし ⇔ `X_INVERT | Y_INVERT`、`X_INVERT` ⇔ `Y_INVERT`）。
+
 ### スムーススクロール
 
 右手側（central）で `CONFIG_ZMK_POINTING_SMOOTH_SCROLLING=y` を有効にしています。HID Resolution Multiplier によってホストは wheel 16 単位を 1 ノッチとして扱うため、スクロールが段階的ではなく滑らかになります。HIDレポートを送るのは central 側だけなので、この設定も右手側の `.conf` にのみ書きます。

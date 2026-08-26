@@ -156,13 +156,30 @@
  * それぞれ 16 倍した 等倍・1/3 が、従来と同じスクロール量に相当する。慣性導入後は
  * 1 フリックの移動距離が伸びるため、スクロール量を 1/2・1/6 に落としている。
  *
+ * センサーの向きと zip_xy_transform：
+ *
+ * 光学センサーは左右とも、以前の実装から見て「上から見て反時計回りに 90 度」回した
+ * 向きで載せている。この 1/4 回転ぶんを前段で打ち消すため、旧チェーンの変換に
+ * 90 度回転を合成した結果が下記のフラグ。旧チェーンは全て XY_SWAP を含んでいたが、
+ * 回転と合成すると SWAP が消えて軸の反転だけが残る。
+ *
+ *   右ボール カーソル    XY_SWAP | X_INVERT            → （変換なし）
+ *   右ボール スクロール  XY_SWAP | X_INVERT | Y_INVERT → Y_INVERT
+ *   左ボール スクロール  XY_SWAP                       → X_INVERT
+ *   左ボール カーソル    XY_SWAP | Y_INVERT            → X_INVERT | Y_INVERT
+ *
+ * 右ボールはこの向きでセンサーの X/Y がそのままカーソルの X/Y に一致するので変換不要。
+ * 左ボールのセンサーは右と 180 度逆向きに載るため X_INVERT | Y_INVERT が入る。
+ * ここは残しておくと向きを直すときの当たりを付けやすいので、右手側も
+ * <&zip_xy_transform 0> の形でノードごと残してある。
+ *
  * スクロールとカーソル移動では Y の符号の意味が逆（REL_Y は正が下、
  * REL_WHEEL は正が上）なので、そのボールの本来の役割と違う側に Y_INVERT を足す。
  */
 &left_trackball_listener {
     /* Base: スクロール 1/2 + 慣性 */
     input-processors =
-        <&zip_xy_transform INPUT_TRANSFORM_XY_SWAP>,
+        <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
         <&zip_xy_to_scroll_mapper>,
         <&scroll_inertia_left_base>,
         <&zip_scroll_scaler 1 2>;
@@ -170,14 +187,14 @@
     move_on_num {
         layers = <1>;
         input-processors =
-            <&zip_xy_transform (INPUT_TRANSFORM_XY_SWAP | INPUT_TRANSFORM_Y_INVERT)>,
+            <&zip_xy_transform (INPUT_TRANSFORM_X_INVERT | INPUT_TRANSFORM_Y_INVERT)>,
             <&zip_xy_scaler 3 2>;
     };
 
     precise_scroll_on_sym {
         layers = <2>;
         input-processors =
-            <&zip_xy_transform INPUT_TRANSFORM_XY_SWAP>,
+            <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
             <&zip_xy_to_scroll_mapper>,
             <&scroll_inertia_left_sym>,
             <&zip_scroll_scaler 1 6>;
@@ -185,22 +202,22 @@
 };
 
 &right_trackball_listener {
-    /* デフォルト（カーソル）チェーンは変更なし */
+    /* デフォルト（カーソル）はセンサーの軸がそのまま使えるので変換なし */
     input-processors =
-        <&zip_xy_transform (INPUT_TRANSFORM_XY_SWAP | INPUT_TRANSFORM_X_INVERT)>,
+        <&zip_xy_transform 0>,
         <&zip_xy_scaler 3 2>;
 
     precise_move_on_num {
         layers = <1>;
         input-processors =
-            <&zip_xy_transform (INPUT_TRANSFORM_XY_SWAP | INPUT_TRANSFORM_X_INVERT)>,
+            <&zip_xy_transform 0>,
             <&zip_xy_scaler 1 2>;
     };
 
     scroll_on_sym {
         layers = <2>;
         input-processors =
-            <&zip_xy_transform (INPUT_TRANSFORM_XY_SWAP | INPUT_TRANSFORM_X_INVERT | INPUT_TRANSFORM_Y_INVERT)>,
+            <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
             <&zip_xy_to_scroll_mapper>,
             <&scroll_inertia_right_sym>,
             <&zip_scroll_scaler 1 2>;
