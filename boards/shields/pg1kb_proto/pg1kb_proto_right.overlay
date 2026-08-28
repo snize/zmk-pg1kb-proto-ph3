@@ -52,6 +52,15 @@
     status = "okay";
 };
 
+/* DYA Studio からカーソル感度を変える runtime input processor（central のみ） */
+&rip_left_cursor {
+    status = "okay";
+};
+
+&rip_right_cursor {
+    status = "okay";
+};
+
 &kscan0 {
     row-gpios
         = <&gpio0 10 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>

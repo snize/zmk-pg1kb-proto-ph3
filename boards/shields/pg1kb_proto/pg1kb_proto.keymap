@@ -181,6 +181,16 @@
  * スクロールとカーソル移動では Y の符号の意味が逆（REL_Y は正が下、
  * REL_WHEEL は正が上）なので、同じボールのカーソルチェーンとスクロールチェーンは
  * 必ず Y_INVERT の有無だけが違う形になる。今の向きでは左右ともスクロール側に付く。
+ *
+ * DYA Studio と rip_*_cursor：
+ *
+ * カーソルチェーンの末尾にある rip_left_cursor / rip_right_cursor は、DYA Studio の
+ * Trackball タブから感度を変えるための runtime input processor（定義は .dtsi）。
+ * 初期値は 1/1 倍なので、書き込んだ直後の操作感は上の表のままになる。
+ *
+ * スクロールチェーンには入れていない。慣性スクロールは scale / scale-div が後段の
+ * zip_scroll_scaler と一致していることを前提に速度を決めているため、Web から倍率を
+ * 変えると「ボールを回している間」と「慣性で流れている間」で速度が食い違うため。
  */
 &left_trackball_listener {
     /* Base: スクロール 1/2 + 慣性 */
@@ -194,7 +204,8 @@
         layers = <1>;
         input-processors =
             <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
-            <&zip_xy_scaler 3 2>;
+            <&zip_xy_scaler 3 2>,
+            <&rip_left_cursor>;
     };
 
     precise_scroll_on_sym {
@@ -211,13 +222,15 @@
     /* デフォルト（カーソル）はセンサーの軸がそのまま使えるので変換なし */
     input-processors =
         <&zip_xy_transform 0>,
-        <&zip_xy_scaler 3 2>;
+        <&zip_xy_scaler 3 2>,
+        <&rip_right_cursor>;
 
     precise_move_on_num {
         layers = <1>;
         input-processors =
             <&zip_xy_transform 0>,
-            <&zip_xy_scaler 1 2>;
+            <&zip_xy_scaler 1 2>,
+            <&rip_right_cursor>;
     };
 
     scroll_on_sym {

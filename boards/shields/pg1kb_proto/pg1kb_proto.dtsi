@@ -1,5 +1,6 @@
 #include <dt-bindings/zmk/matrix_transform.h>
 #include <physical_layouts.dtsi>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
 
 / {
     chosen {
@@ -95,6 +96,49 @@
         min-events = <6>;
     };
 
+    /*
+     * DYA Studio からカーソル感度を変えるための runtime input processor。
+     *
+     * scroll_inertia と同じ流儀で、ここでは status = "disabled" の共有定義だけを置き、
+     * pg1kb_proto_right.overlay でのみ okay にする。左手ビルドでは listener 自体が
+     * disabled なのでインスタンス化されない（このドライバも DT_INST_FOREACH_STATUS_OKAY）。
+     *
+     * 既存の zip_xy_scaler の後段に置き、初期値は 1/1 倍。つまり書き込み直後の操作感は
+     * 従来と変わらず、Web から掛けた倍率が「そのボールのカーソル感度」として上乗せされる。
+     * 減速したときの情報損失を減らすため、固定スケーラで拡大した後に置いている
+     * （余りは track-remainders で繰り越される）。
+     *
+     * 右ボールは Base と Num で同じノードを共有する。Web 上は「右ボールの感度」という
+     * 1 つのつまみになり、レイヤー間の 3/2 : 1/2 という比率は devicetree 側で保たれる。
+     *
+     * processor-label は BLE 互換のため 8 文字までという制限がある。
+     */
+    rip_left_cursor: rip_left_cursor {
+        compatible = "zmk,input-processor-runtime";
+        status = "disabled";
+        processor-label = "L-Ball";
+        type = <INPUT_EV_REL>;
+        x-codes = <INPUT_REL_X>;
+        y-codes = <INPUT_REL_Y>;
+        scale-multiplier = <1>;
+        scale-divisor = <1>;
+        track-remainders;
+        #input-processor-cells = <0>;
+    };
+
+    rip_right_cursor: rip_right_cursor {
+        compatible = "zmk,input-processor-runtime";
+        status = "disabled";
+        processor-label = "R-Ball";
+        type = <INPUT_EV_REL>;
+        x-codes = <INPUT_REL_X>;
+        y-codes = <INPUT_REL_Y>;
+        scale-multiplier = <1>;
+        scale-divisor = <1>;
+        track-remainders;
+        #input-processor-cells = <0>;
+    };
+
     pg1kb_proto_physical_layout: physical_layout_0 {
         compatible = "zmk,physical-layout";
         display-name = "Default 5x12 Split Layout";
@@ -155,6 +199,27 @@
             , <&key_physical_attrs 100 100  850  400       0     0     0>
             , <&key_physical_attrs 100 100  950  400       0     0     0>
             ;
+    };
+
+    /*
+     * DYA Studio のプレビューに左右のボールを描くための定義。
+     * 座標と大きさは上の physical layout の keys と同じ単位（100 = 1u）。
+     * 実機を DYA Studio に繋いだプレビューを見ながら調整する前提の暫定値。
+     */
+    pg1kb_proto_left_ball: pg1kb_proto_left_ball {
+        compatible = "cormoran,physical-layout-trackball";
+        display-name = "Left Ball";
+        size = <120>;
+        x = <100>;
+        y = <475>;
+    };
+
+    pg1kb_proto_right_ball: pg1kb_proto_right_ball {
+        compatible = "cormoran,physical-layout-trackball";
+        display-name = "Right Ball";
+        size = <120>;
+        x = <1050>;
+        y = <475>;
     };
 
     default_transform: keymap_transform_0 {

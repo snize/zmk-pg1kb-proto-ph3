@@ -11,7 +11,7 @@ PG1KB Proto (Page One Keyboard Prototype) のZMKファームウェア用モジ�
 - 左手側はPAW3222トラックボールをSPI接続のZMK pointing deviceとして有効化
 - 両手とも overlay の `#define` で PMW3610 に切り替え可能
 - 右手側のBAT_CHECKピンを単4アルカリ乾電池の残量測定用ADCとして使用
-- 右手側（central）は ZMK Studio 対応
+- 右手側（central）は ZMK Studio / [DYA Studio](#dya-studio) 対応
 - 1時間の無操作で Deep Sleep へ移行（`.conf` で時間変更・無効化が可能）。キーの押下で復帰しない場合は、右手側のRESETボタンを押すことで復帰
 - スクロールはスムーススクロール（HID Resolution Multiplier）＋慣性スクロールに対応
 
@@ -38,6 +38,52 @@ Studio では devicetree に定義されていないレイヤーを新規追加�
 Studio でキーマップを管理し始めると、以降 `pg1kb_proto.keymap` を編集して書き込んでも反映されなくなります。ファイル側の変更を反映したいときは Studio の "Restore Stock Settings" を実行してください（予備レイヤーの追加だけは例外で、Studio側の設定を消さずに増やせます）。
 
 Studio が編集できるのはレイヤーとキーへのビヘイビア割り当てだけです。コンボ（`combo-bs` / `combo-del` / `combo-enter`）、入力プロセッサ、`lt` のタッピング設定などは引き続き devicetree 側で管理します。
+
+## DYA Studio
+
+[DYA Studio](https://studio.dya.cormoran.works/) は ZMK Studio の拡張版にあたる Web ツールで、キーマップに加えてマクロ・コンボ・トラックボールの感度・BLE プロファイル・スリープ時間をブラウザから変更できます。Chrome / Edge から USB（Web Serial）または BLE（Web Bluetooth）で接続します。作者による[開発者ガイド](https://studio.dya.cormoran.works/developer-guide)があります。
+
+### ZMK 本体が fork になっている
+
+DYA Studio の拡張機能は ZMK 公式にはない Custom Studio Protocol の上で動くため、`config/west.yml` の `zmk` を [cormoran/zmk](https://github.com/cormoran/zmk) の `main+dya` ブランチに差し替えています。**これは DYA Studio 対応の必須条件**で、公式の `zmkfirmware/zmk` では下記のモジュール群がビルドできません。
+
+これに伴って ZMK 0.4 系（Zephyr 4.1）へ上がるため、`build.yaml` のボード指定も `seeeduino_xiao_ble` から `xiao_ble//zmk` に変わっています（ZMK 0.4 で XIAO のボード定義が upstream Zephyr のものへ移ったため）。CI も同じ fork のワークフローを使います。
+
+公式 ZMK へ戻すときは次の 5 箇所を元に戻します。
+
+1. `config/west.yml` の `zmk` を `remote: zmkfirmware` / `revision: v0.3.0` にし、cormoran の各モジュールを消す
+2. `build.yaml` のボードを `seeeduino_xiao_ble` に戻す
+3. `.github/workflows/build.yml` の `uses:` を `zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.3.0` に戻す
+4. 左右の `.conf` の「DYA Studio」セクションを消す
+5. `pg1kb_proto.keymap` のカーソルチェーンから `&rip_left_cursor` / `&rip_right_cursor` を外す
+
+### 使えるタブ
+
+| タブ | できること |
+| --- | --- |
+| Keymap | キー割り当て、レイヤーの追加・並べ替え・改名、押下キーのリアルタイム表示 |
+| Macro & Combo | マクロとコンボを実行時に作成・編集 |
+| Trackball | 左右ボールのカーソル感度 |
+| Connection | BLE プロファイルの管理 |
+| Settings | スリープまでの時間 |
+| Troubleshooting | 電池残量の履歴、デバイス情報 |
+
+### トラックボールで変えられるもの
+
+Web から変えられるのは**左右ボールのカーソル感度だけ**です（`L-Ball` / `R-Ball` という名前で出ます）。
+
+- 初期値は 1/1 倍なので、書き込んだ直後の操作感は[トラックボールの役割](#トラックボールの役割)の表のままです。Web で掛けた倍率がその上に乗ります。右ボールは Base と Num で同じつまみを共有し、レイヤー間の 3/2 : 1/2 という比率は devicetree 側で保たれます。
+- **スクロールの倍率と慣性は devicetree 側のまま**です。慣性スクロールは自分の `scale` / `scale-div` が後段の `zip_scroll_scaler` と一致していることを前提に速度を決めているので、Web から倍率を変えると「ボールを回している間」と「慣性で流れている間」で速度が食い違うためです。
+- センサー自体の設定（CPI など）を Web から変える RPC は PMW3610 用ドライバにしかなく、この機体が使っている PAW3222 では出ません。
+
+### コンボとスリープ時間の扱い
+
+- `pg1kb_proto.keymap` の `combo-bs` / `combo-del` / `combo-enter` は従来どおり devicetree 管理で、DYA Studio からは編集できません。Macro & Combo タブで作れるのは、それとは別枠の runtime combo スロットです。
+- `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT` は Settings タブから上書きできるようになります。`.conf` の値は初期値の扱いになり、一度 Web から変更すると以降はそちらが優先されます。
+
+### プレビューのボール表示
+
+レイアウトプレビューに左右のボールを描くため、`pg1kb_proto.dtsi` に `pg1kb_proto_left_ball` / `pg1kb_proto_right_ball` を定義しています。座標（`x` / `y` / `size`）は physical layout のキーと同じ単位（100 = 1u）の暫定値なので、実機のプレビューを見ながら合わせてください。
 
 ## トラックボールセンサーの切替
 
@@ -221,3 +267,5 @@ Deep Sleep の実体は Zephyr の `sys_poweroff()`（nRF52840 では System OFF
 | [zmk-pmw3610-driver](https://github.com/badjeff/zmk-pmw3610-driver) | MIT | PMW3610 トラックボールドライバー。badjeff 著作権 |
 | [zmk-feature-non-lipo-battery-management](https://github.com/sekigon-gonnoc/zmk-feature-non-lipo-battery-management) | MIT | 単4アルカリなど非LiPo電池向けの残量測定。現在は snize の fork を参照（[Deep Sleep](#non-lipo-モジュールの-fork-を参照している理由) 参照） |
 | [zmk-input-processor-scroll-inertia](https://github.com/mjmjm0101/zmk-input-processor-scroll-inertia) | MIT | 慣性スクロールの入力プロセッサ。mjmjm0101 著作権 |
+| [cormoran/zmk](https://github.com/cormoran/zmk) | MIT | DYA Studio の Custom Studio Protocol に対応した ZMK fork |
+| DYA Studio モジュール群 | MIT | [custom-settings](https://github.com/cormoran/zmk-feature-custom-settings) / [fast-keymap](https://github.com/cormoran/zmk-feature-fast-keymap) / [runtime-macro](https://github.com/cormoran/zmk-feature-runtime-macro) / [runtime-combo](https://github.com/cormoran/zmk-feature-runtime-combo) / [input-stream](https://github.com/cormoran/zmk-feature-input-stream) / [module-physical-layout](https://github.com/cormoran/zmk-feature-module-physical-layout) / [runtime-input-processor](https://github.com/cormoran/zmk-module-runtime-input-processor) / [ble-management](https://github.com/cormoran/zmk-module-ble-management) / [settings-rpc](https://github.com/cormoran/zmk-module-settings-rpc) / [battery-history](https://github.com/cormoran/zmk-module-battery-history)。いずれも cormoran 著作権 |

@@ -1,5 +1,7 @@
 manifest:
   remotes:
+    - name: cormoran
+      url-base: https://github.com/cormoran
     - name: zmkfirmware
       url-base: https://github.com/zmkfirmware
     - name: sekigon-gonnoc
@@ -13,16 +15,67 @@ manifest:
     - name: snize
       url-base: https://github.com/snize
   projects:
+    # DYA Studio の Custom Studio Protocol に対応した ZMK fork。
+    # 公式の zmkfirmware/zmk では下の DYA モジュール群がビルドできない。
+    # DYA Studio 対応をやめるときは remote: zmkfirmware / revision: v0.3.0 に戻し、
+    # DYA モジュールと .conf の該当行を消す。
     - name: zmk
-      remote: zmkfirmware
-      revision: v0.3.0
+      remote: cormoran
+      revision: main+dya
       import: app/west.yml
+
+    # --- DYA Studio: 各モジュールが依存するコア ---
+    - name: zmk-feature-custom-settings
+      remote: cormoran
+      revision: main
+    # キーマップ読み込みの高速化。main 系の ZMK fork でのみ動く。
+    - name: zmk-feature-fast-keymap
+      remote: cormoran
+      revision: main
+
+    # --- DYA Studio: Keymap / Macro / Combo タブ ---
+    # macro / combo は自前の west.yml で custom-settings を import するため、
+    # name-blocklist で二重取り込みを防ぐ。
+    - name: zmk-feature-runtime-macro
+      remote: cormoran
+      revision: main
+      import:
+        name-blocklist:
+          - zmk-feature-custom-settings
+    - name: zmk-feature-runtime-combo
+      remote: cormoran
+      revision: main
+      import:
+        name-blocklist:
+          - zmk-feature-custom-settings
+    - name: zmk-feature-input-stream
+      remote: cormoran
+      revision: main
+    - name: zmk-feature-module-physical-layout
+      remote: cormoran
+      revision: main
+
+    # --- DYA Studio: Trackball / Connection / Settings タブ ---
+    - name: zmk-module-runtime-input-processor
+      remote: cormoran
+      revision: main
+    - name: zmk-module-ble-management
+      remote: cormoran
+      revision: main
+    - name: zmk-module-settings-rpc
+      remote: cormoran
+      revision: main
+    - name: zmk-module-battery-history
+      remote: cormoran
+      revision: main
+
+    # --- キーボード本体の依存 ---
     - name: zmk-driver-paw3222
       remote: sekigon-gonnoc
       revision: main
     - name: zmk-pmw3610-driver
       remote: badjeff
-      revision: zmk-0.3
+      revision: zmk-0.4
     - name: zmk-feature-non-lipo-battery-management
       remote: snize
       revision: fix/do-not-force-zmk-sleep

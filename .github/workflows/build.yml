@@ -2,4 +2,6 @@ on: [push]
 
 jobs:
   build:
-    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.3.0
+    # DYA Studio 対応のため ZMK 本体を cormoran fork に切り替えているので、
+    # ビルド用ワークフローも同じ fork のものを使う。
+    uses: cormoran/zmk/.github/workflows/build-user-config.yml@main+dya

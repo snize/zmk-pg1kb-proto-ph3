@@ -1,12 +1,16 @@
 ---
-# ZMK Studio は central（右手側）のみで有効にする。
-# peripheral（左手側）は Studio を持たないので通常ビルドのまま。
+# ZMK Studio / DYA Studio は central（右手側）のみで有効にする。
+# peripheral（左手側）は Studio RPC を持たないので通常ビルドのまま。
+#
+# ボード名は DYA 対応で cormoran/zmk#main+dya（ZMK 0.4 系）に切り替えたことで
+# seeeduino_xiao_ble から xiao_ble//zmk に変わっている。v0.3 系へ戻すときは
+# seeeduino_xiao_ble に戻すこと。
 include:
-  - board: seeeduino_xiao_ble
+  - board: xiao_ble//zmk
     shield: pg1kb_proto_right
     snippet: studio-rpc-usb-uart
     cmake-args: -DCONFIG_ZMK_STUDIO=y
     artifact-name: pg1kb_proto_right
-  - board: seeeduino_xiao_ble
+  - board: xiao_ble//zmk
     shield: pg1kb_proto_left
     artifact-name: pg1kb_proto_left
