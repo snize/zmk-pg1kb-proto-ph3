@@ -205,6 +205,12 @@
      * DYA Studio のプレビューに左右のボールを描くための定義。
      * 座標と大きさは上の physical layout の keys と同じ単位（100 = 1u）。
      * 実機を DYA Studio に繋いだプレビューを見ながら調整する前提の暫定値。
+     *
+     * linked-* は index を揃えた必須プロパティで、そのボールがどの Custom Studio
+     * Protocol のデバイスに対応するかを Studio へ伝える。この機体のセンサーは
+     * PAW3222 で専用の RPC を持たないため、感度を持っている runtime input
+     * processor（サブシステム識別子 cormoran_rip、デバイス識別子は processor-label）
+     * を指している。
      */
     pg1kb_proto_left_ball: pg1kb_proto_left_ball {
         compatible = "cormoran,physical-layout-trackball";
@@ -212,6 +218,8 @@
         size = <120>;
         x = <100>;
         y = <475>;
+        linked-device-identifiers = "L-Ball";
+        linked-subsystems = "cormoran_rip";
     };
 
     pg1kb_proto_right_ball: pg1kb_proto_right_ball {
@@ -220,6 +228,8 @@
         size = <120>;
         x = <1050>;
         y = <475>;
+        linked-device-identifiers = "R-Ball";
+        linked-subsystems = "cormoran_rip";
     };
 
     default_transform: keymap_transform_0 {
